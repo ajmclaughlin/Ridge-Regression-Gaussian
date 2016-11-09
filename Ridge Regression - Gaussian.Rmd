@@ -1,0 +1,83 @@
+#Note: This Post is Currently A Work In Progress.  
+
+$$RSS = \sum_{i=1}^{N} \left(y_i - \beta_0 - \sum_{j=i}^{p} \beta_{j}x_{ij}\right)^2$$
+
+
+$$\sum_{i=1}^{N} \left(y_i - \beta_0 - \sum_{j=i}^{p} \beta_{j}x_{ij}\right)^2 + \lambda \sum_{j=i}^{p} \beta_{j}^2 = RSS +  \lambda \sum_{j=i}^{p} \beta_{j}^2 $$
+
+#Ridge Regression - Gaussian
+
+$$\min_{(\beta_0, \beta) \in \mathbb{R}^{p+1}}\frac{1}{2N} \sum_{i=1}^N (y_i -\beta_0-x_i^T \beta)^2+\lambda \left[ (1-\alpha)||\beta||_2^2/2 + \alpha||\beta||_1\right]$$
+
+* $\lambda \geq 0$
+
+* $0 \leq \alpha \leq 1$
+
+* Ridge $\alpha = 0$
+
+* Lasso $\alpha = 1$
+
+* $\tilde{\beta_0}$ and $\tilde{\beta}_\ell \forall j\in 1,\ldots,p$
+
+* $\beta_j = \tilde{\beta}_j$
+
+$$\tilde{\beta}_j \leftarrow \frac{S(\frac{1}{N}\sum_{i=1}^N x_{ij}(y_i-\tilde{y}_i^{(j)}),\lambda \alpha)}{1+\lambda(1-\alpha)}$$
+
+* $\tilde{y}_i^{(j)} = \tilde{\beta}_0 + \sum_{\ell \neq j} x_{i\ell} \tilde{\beta}_\ell$
+
+* $S(z, \gamma)$
+
+* $\text{sign}(z)(|z|-\gamma)_+$
+
+
+
+###Penalty Factors
+
+$$\lambda \sum_{j=1}^p \boldsymbol{v_j} P_\alpha(\beta_j) = \lambda \sum_{j=1}^p \boldsymbol{v_j} \left[ (1-\alpha)\frac{1}{2} \beta_j^2 + \alpha |\beta_j| \right]$$
+
+```{r}
+library(glmnet)
+library(ISLR)
+
+#write.table(Hitters, "C:/Users/andrew/Desktop/Hitters.csv", sep=",")
+datafile <- read.csv(file="C:/Users/andrew/Desktop/Hitters.csv",head=TRUE,sep=",")
+colnames(datafile)[colnames(datafile)=="Salary"] <- "dep_var"
+
+ntrain <- floor((4/5)*nrow(datafile))
+set.seed(1)
+train=sample(seq(nrow(datafile)),ntrain,replace=FALSE)
+#datafile[train,]
+
+head(datafile[train,])
+dim(datafile[train,])
+datafile[train,] = na.omit(datafile[train,])
+x=model.matrix(dep_var~.-1,data=datafile[train,])
+y=datafile[train,]$dep_var
+
+fit.ridge=glmnet(x,y,family="gaussian",alpha=0)
+plot(fit.ridge,xvar="lambda",label=TRUE)
+plot(fit.ridge,xvar="dev",label=TRUE)
+
+set.seed(1)
+cv.ridge=cv.glmnet(x,y,family="gaussian",alpha=0)
+plot(cv.ridge)
+
+cv.ridge$lambda.min
+cv.ridge$lambda.1se
+
+fit.ridge.min=glmnet(x,y,alpha=0,lambda=cv.ridge$lambda.min) 
+coef(fit.ridge.min)
+
+fit.ridge.1se=glmnet(x,y,alpha=0,lambda=cv.ridge$lambda.1se) 
+coef(fit.ridge.1se)
+
+pred=predict(fit.ridge.min,x[-train,])
+error=pred-y[-train]
+
+
+mse = (sum((error)^2))/length(y[-train])
+mse
+
+plot(y[-train],pred)
+abline(0,1)
+```
